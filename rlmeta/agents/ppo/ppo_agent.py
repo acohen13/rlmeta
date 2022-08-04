@@ -90,6 +90,7 @@ class PPOAgent(Agent):
 
     async def async_act(self, timestep: TimeStep) -> Action:
         obs = timestep.observation
+
         action, logpi, v = await self.model.async_act(
             obs, torch.tensor([self.deterministic_policy]))
         return Action(action, info={"logpi": logpi, "v": v})
@@ -221,12 +222,16 @@ class PPOAgent(Agent):
         old_logpi = batch["logpi"]
         adv = batch["gae"]
         ret = batch["ret"]
-        logpi, v = self._model_forward(obs)
+        dists, v = self._model_forward(obs)
+        logpi = dists.log_prob(act)
 
-        policy_loss, ratio = self._policy_loss(logpi.gather(dim=-1, index=act),
-                                               old_logpi, adv)
+        #policy_loss, ratio = self._policy_loss(logpi.gather(dim=-1, index=act),
+        #                                       old_logpi, adv)
+        policy_loss, ratio = self._policy_loss(logpi, old_logpi, adv)
+
         value_loss = self._value_loss(ret, v, batch.get("v", None))
-        entropy = self._entropy(logpi)
+        #entropy = self._entropy(logpi)
+        entropy = torch.mean(dists.entropy())
         loss = policy_loss + (self.vf_loss_coeff *
                               value_loss) - (self.entropy_coeff * entropy)
         loss.backward()
@@ -252,7 +257,7 @@ class PPOAgent(Agent):
         if self.advantage_normalization:
             # Advantage normalization
             std, mean = torch.std_mean(adv, unbiased=False)
-            adv = (adv - mean) / std
+            adv = torch.squeeze((adv - mean) / std)
 
         # Policy clip
         ratio = (logpi - old_logpi).exp()
