@@ -85,7 +85,8 @@ class GymWrapper(Env):
     def step(self, action: Action) -> TimeStep:
         act = action.action
         if not isinstance(act, int):
-            act = act.item()
+            #act = act.item()
+            act = act.detach().cpu().numpy()
         obs, reward, done, info = self._env.step(act)
         obs = self._observation_fn(obs)
         return TimeStep(obs, reward, done, info)
