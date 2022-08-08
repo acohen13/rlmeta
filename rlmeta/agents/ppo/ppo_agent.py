@@ -225,6 +225,7 @@ class PPOAgent(Agent):
         dists, v = self._model_forward(obs)
         logpi = dists.log_prob(act)
 
+        mean, std = torch.mean(dists.mean, dim=0), torch.mean(dists.std, dim=0)
         #policy_loss, ratio = self._policy_loss(logpi.gather(dim=-1, index=act),
         #                                       old_logpi, adv)
         policy_loss, ratio = self._policy_loss(logpi, old_logpi, adv)
@@ -247,6 +248,13 @@ class PPOAgent(Agent):
             "entropy": entropy.detach().mean().item(),
             "loss": loss.detach().mean().item(),
             "grad_norm": grad_norm.detach().mean().item(),
+            "mean_a0": mean.detach().numpy()[0],
+            "std_a0": std.detach().numpy()[0],
+            "mean_a1": mean.detach().numpy()[1],
+            "std_a1": std.detach().numpy()[1],
+            "mean_a2": mean.detach().numpy()[2],
+            "std_a2": std.detach().numpy()[2],
+
         }
 
     def _model_forward(self, obs: torch.Tensor) -> Tuple[torch.Tensor, ...]:
