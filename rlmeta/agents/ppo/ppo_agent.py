@@ -225,7 +225,9 @@ class PPOAgent(Agent):
         dists, v = self._model_forward(obs)
         logpi = dists.log_prob(act)
 
-        mean, std = torch.mean(dists.mean, dim=0), torch.mean(dists.std, dim=0)
+        mean_act = torch.mean(act, dim=0).detach().cpu().numpy()
+        mean = torch.mean(dists.mean, dim=0).detach().cpu().numpy()
+        std = torch.mean(dists.std, dim=0).detach().cpu().numpy()
         #policy_loss, ratio = self._policy_loss(logpi.gather(dim=-1, index=act),
         #                                       old_logpi, adv)
         policy_loss, ratio = self._policy_loss(logpi, old_logpi, adv)
@@ -248,12 +250,16 @@ class PPOAgent(Agent):
             "entropy": entropy.detach().mean().item(),
             "loss": loss.detach().mean().item(),
             "grad_norm": grad_norm.detach().mean().item(),
-            "mean_a0": mean.detach().numpy()[0],
-            "std_a0": std.detach().numpy()[0],
-            "mean_a1": mean.detach().numpy()[1],
-            "std_a1": std.detach().numpy()[1],
-            "mean_a2": mean.detach().numpy()[2],
-            "std_a2": std.detach().numpy()[2],
+            "log_probs": logpi.detach().mean().item(),
+            "act_a0": mean_act[0],
+            "mean_a0": mean[0],
+            "std_a0": std[0],
+            "act_a1": mean_act[1],
+            "mean_a1": mean[1],
+            "std_a1": std[1],
+            "act_a2": mean_act[2],
+            "mean_a2": mean[2],
+            "std_a2": std[2],
 
         }
 
